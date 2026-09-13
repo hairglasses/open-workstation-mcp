@@ -1,4 +1,7 @@
 /open-workstation-mcp
+/host-mcp
+/bin/
 /dist/
 /coverage.out
 *.tmp
+
