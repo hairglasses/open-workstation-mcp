@@ -24,9 +24,21 @@ For a quick review path:
    diagram, walkthrough plan, tradeoffs, and interview prompts.
 5. Check [PUBLIC_BOUNDARY.md](PUBLIC_BOUNDARY.md) before adding tools or examples.
 
+## Host MCP Consolidation
+
+`open-workstation-mcp` is the consolidated host MCP server for Hairglasses Studio workstation infrastructure, providing 44 tools across three core domains with a single Prometheus metrics port (9095):
+
+- **systemd** (13 tools): `systemd_status`, `systemd_start`, `systemd_stop`, `systemd_restart`, `systemd_enable`, `systemd_disable`, `systemd_logs`, `systemd_list_units`, `systemd_list_timers`, `systemd_failed`, `systemd_investigate_unit`, `systemd_create_timer`, `systemd_analyze`
+- **tmux** (14 tools): `tmux_list_sessions`, `tmux_list_windows`, `tmux_list_panes`, `tmux_capture_pane`, `tmux_send_keys`, `tmux_new_session`, `tmux_new_window`, `tmux_kill_session`, `tmux_wait_for_text`, `tmux_search_panes`, `tmux_workspace`, `tmux_resize_pane`, `tmux_snapshot`, `tmux_template`
+- **process** (17 tools): `ps_list`, `ps_tree`, `kill_process`, `port_list`, `gpu_status`, `system_info`, `investigate_port`, `investigate_service`, `fd_list`, `mem_map`, `net_connections`, `investigate_memory`, `investigate_cpu`, `ps_search`, `proc_inspect`, `liveness_gate`, `dbus_probe`
+
+Backward-compatibility symlinks in `~/.local/bin/` (`systemd-mcp`, `tmux-mcp`, `process-mcp`) all point to this unified binary.
+
 ## What Works Now
 
 - Register typed workstation tools and emit a deterministic manifest.
+- Expose 44 host management tools across systemd, tmux, and process domains.
+- Expose Prometheus metrics on port 9095.
 - Generate dry-run focus/input/config plans from synthetic parameters.
 - Keep all sample outputs local, deterministic, and fixture-safe.
 - Enforce a dry-run policy middleware and response-size budget.

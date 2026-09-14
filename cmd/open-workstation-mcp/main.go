@@ -6,32 +6,114 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/hairglasses-studio/mcpkit/middleware/gate"
+	"github.com/hairglasses-studio/mcpkit/observability"
+	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses-studio/mcpkit/slogcfg"
+	"github.com/hairglasses/open-workstation-mcp/internal/process"
+	"github.com/hairglasses/open-workstation-mcp/internal/systemd"
+	"github.com/hairglasses/open-workstation-mcp/internal/tmux"
 	"github.com/hairglasses/open-workstation-mcp/internal/workstationmcp"
 )
 
-func main() {
-	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+func BuildRegistry() *registry.ToolRegistry {
+	reg := registry.NewToolRegistry(registry.Config{
+		Middleware: []registry.Middleware{
+			gate.Middleware(gate.Config{Gate: gate.PauseWrites}),
+			registry.AuditMiddleware(""),
+			registry.SafetyTierMiddleware(),
+		},
+	})
+
+	reg.RegisterModule(&systemd.SystemdModule{})
+	reg.RegisterModule(&tmux.TmuxModule{})
+	reg.RegisterModule(&process.ProcessModule{})
+
+	return reg
 }
 
-func run(args []string) error {
-	if len(args) == 0 {
-		return usage()
+func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "manifest":
+			if err := printJSON(workstationmcp.SampleGateway().Manifest()); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			return
+		case "call":
+			if err := call(os.Args[2:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			return
+		case "-tools", "--tools", "tools":
+			reg := BuildRegistry()
+			tools := reg.GetAllToolDefinitions()
+			fmt.Printf("Registered %d tools across systemd, tmux, and process domains:\n", len(tools))
+			for _, t := range tools {
+				fmt.Printf("  - %s: %s\n", t.Tool.Name, t.Tool.Description)
+			}
+			return
+		case "help", "-h", "--help":
+			if err := usage(); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(0)
+			}
+			return
+		}
 	}
-	switch args[0] {
-	case "manifest":
-		return printJSON(workstationmcp.SampleGateway().Manifest())
-	case "call":
-		return call(args[1:])
-	case "help", "-h", "--help":
-		return usage()
-	default:
-		return fmt.Errorf("unknown command %q\n\n%w", args[0], usage())
+
+	ctx := context.Background()
+
+	slogcfg.Init(slogcfg.Config{
+		ServiceName: "open-workstation-mcp",
+	})
+
+	obs, obsShutdown, err := observability.Init(ctx, observability.Config{
+		ServiceName:    "open-workstation-mcp",
+		ServiceVersion: "1.0.0",
+		EnableMetrics:  true,
+		EnableTracing:  true,
+		OTLPEndpoint:   os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"),
+		PrometheusPort: "9095",
+	})
+	if err != nil {
+		slog.Warn("failed to initialize observability", "error", err)
+	}
+	defer func() {
+		if obsShutdown != nil {
+			_ = obsShutdown(context.Background())
+		}
+	}()
+
+	systemd.InitDBus()
+
+	reg := BuildRegistry()
+	s := registry.NewMCPServer("open-workstation-mcp", "1.0.0")
+	reg.RegisterWithServer(s)
+
+	systemd.RegisterResourcesAndPrompts(s)
+	tmux.RegisterResourcesAndPrompts(s)
+	process.RegisterResourcesAndPrompts(s)
+
+	if obs != nil {
+		reg.SetMiddleware([]registry.Middleware{
+			obs.Middleware(),
+			gate.Middleware(gate.Config{Gate: gate.PauseWrites}),
+			registry.AuditMiddleware(""),
+			registry.SafetyTierMiddleware(),
+		})
+	}
+
+	slog.Info("open-workstation-mcp server starting", "tools", reg.ToolCount(), "prometheus_port", "9095")
+	if err := registry.ServeAuto(s); err != nil {
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -54,7 +136,7 @@ func call(args []string) error {
 }
 
 func usage() error {
-	return errors.New("usage: open-workstation-mcp manifest | call <tool> [--param key=value]")
+	return errors.New("usage: open-workstation-mcp [manifest | call <tool> [--param key=value] | -tools]")
 }
 
 type multiFlag []string
