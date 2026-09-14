@@ -40,11 +40,30 @@ func runCmd(name string, args ...string) (string, string, error) {
 }
 
 func runTmux(args ...string) (string, error) {
+	args = anchorTargetArg(args)
 	stdout, stderr, err := runCmd("tmux", args...)
 	if err != nil {
 		return "", fmt.Errorf("tmux %s: %s: %w", strings.Join(args, " "), stderr, err)
 	}
 	return stdout, nil
+}
+
+// anchorTargetArg rewrites the value of the first "-t" flag (before any "--")
+// through exactTarget, so every tmux call made via runTmux resolves its target
+// by exact name instead of tmux's prefix-then-fnmatch fallback. Centralising it
+// here covers composite "session:window" targets built at the call sites too.
+func anchorTargetArg(args []string) []string {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "--" {
+			return args
+		}
+		if args[i] == "-t" {
+			out := append([]string(nil), args...)
+			out[i+1] = exactTarget(args[i+1])
+			return out
+		}
+	}
+	return args
 }
 
 // isNoServer returns true if the error indicates tmux has no running server.
@@ -88,6 +107,63 @@ func tmuxTarget(session, window, pane string) string {
 		t += "." + pane
 	}
 	return t
+}
+
+// exactTarget anchors a tmux target string for exact-match resolution
+// instead of tmux's default prefix-then-fnmatch(3) session/window/pane name
+// lookup. Without this, "kill-session -t agent-1" (or any bare-name target)
+// can resolve against an unrelated session whose name merely starts with
+// "agent-1" — the root cause behind cross-session tmux operations landing on
+// the wrong session.
+//
+// Forms handled:
+//   - "" (empty)            -> "" (caller must reject empty separately;
+//     see validateKillSessionName for the one tool where an empty target is
+//     itself a hazard, not just a no-op)
+//   - already "=foo"        -> "=foo:"
+//   - tmux ids "$1"/"@2"/"%3" -> unchanged        (already unique/exact)
+//   - bare "session"        -> "=session:"
+//   - "session:window"      -> "=session:window"
+//   - "session:window.pane" -> "=session:window.pane"
+//
+// The "=" prefix on a compound target anchors the session-name component to
+// an exact match per tmux's target grammar (cmd_find.c); window/pane
+// components of an already-existing session are addressed by index or id,
+// which tmux always treats as exact.
+func exactTarget(target string) string {
+	if target == "" {
+		return target
+	}
+	switch target[0] {
+	case '$', '@', '%':
+		return target
+	}
+	if target[0] != '=' {
+		target = "=" + target
+	}
+	// A bare "=name" is only valid for session-target commands: tmux 3.7c
+	// rejects it for pane/window targets ("can't find pane: =name"). "=name:"
+	// is exact for session, window and pane targets alike.
+	if !strings.Contains(target, ":") {
+		target += ":"
+	}
+	return target
+}
+
+// validateKillSessionName rejects tmux_kill_session inputs that are unsafe
+// regardless of exactTarget's "=" anchoring: an empty name (tmux's CLI parses
+// a missing/empty -t as "most recently used session" rather than failing,
+// so an empty string here must never reach `tmux kill-session -t`) and any
+// fnmatch(3) glob metacharacter, which signals a caller expecting
+// prefix/pattern matching semantics this tool deliberately never offers.
+func validateKillSessionName(name string) error {
+	if name == "" {
+		return fmt.Errorf("[%s] session name is required", handler.ErrInvalidParam)
+	}
+	if strings.ContainsAny(name, "*?[]") {
+		return fmt.Errorf("[%s] session name %q must not contain glob characters (* ? [ ]); tmux_kill_session requires an exact session name", handler.ErrInvalidParam, name)
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -878,8 +954,8 @@ func (m *TmuxModule) Tools() []registry.ToolDefinition {
 		"tmux_kill_session",
 		"Kill a tmux session by name.",
 		func(_ context.Context, input KillSessionInput) (KillSessionOutput, error) {
-			if strings.TrimSpace(input.Name) == "" {
-				return KillSessionOutput{}, fmt.Errorf("[%s] session name is required", handler.ErrInvalidParam)
+			if err := validateKillSessionName(strings.TrimSpace(input.Name)); err != nil {
+				return KillSessionOutput{}, err
 			}
 			slog.Info("killing session", "session", input.Name)
 			_, err := runTmux("kill-session", "-t", input.Name)
