@@ -1,0 +1,6 @@
+source "$HOME/hairglasses-studio/dotfiles/make/ralphrc-base"
+PROJECT_NAME="open-workstation-mcp"
+# Quality gates go through the Makefile so its GOWORK/tag settings apply.
+QG_BUILD_CMD="make build"
+QG_TEST_CMD="make test"
+QG_VET_CMD="make vet"
