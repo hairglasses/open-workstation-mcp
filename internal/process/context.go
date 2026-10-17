@@ -98,4 +98,3 @@ func RegisterResourcesAndPrompts(s *registry.MCPServer) {
 	buildProcessResourceRegistry().RegisterWithServer(s)
 	buildProcessPromptRegistry().RegisterWithServer(s)
 }
-

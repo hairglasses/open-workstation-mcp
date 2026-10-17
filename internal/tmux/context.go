@@ -94,4 +94,3 @@ func RegisterResourcesAndPrompts(s *registry.MCPServer) {
 	buildTmuxResourceRegistry().RegisterWithServer(s)
 	buildTmuxPromptRegistry().RegisterWithServer(s)
 }
-
