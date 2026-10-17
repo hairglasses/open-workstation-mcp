@@ -482,4 +482,3 @@ func main() {
 func InitDBus() {
 	initDBus()
 }
-

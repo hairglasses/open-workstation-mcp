@@ -111,4 +111,3 @@ func RegisterResourcesAndPrompts(s *registry.MCPServer) {
 	buildSystemdResourceRegistry().RegisterWithServer(s)
 	buildSystemdPromptRegistry().RegisterWithServer(s)
 }
-
