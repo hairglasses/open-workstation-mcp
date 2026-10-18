@@ -396,7 +396,7 @@ func ProbeDbus(input DbusProbeInput) (DbusProbeOutput, error) {
 			Error:   fmt.Sprintf("[%s] failed to connect to D-Bus (%s): %v", handler.ErrClientInit, input.Bus, err),
 		}, nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	output := DbusProbeOutput{
 		Bus:     busUsed,
