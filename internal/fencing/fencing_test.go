@@ -233,9 +233,10 @@ func TestSafeKill_MatchingSucceeds(t *testing.T) {
 	}
 
 	// Process should terminate
-	done := make(chan error, 1)
+	done := make(chan struct{})
 	go func() {
-		done <- cmd.Wait()
+		_ = cmd.Wait() // killed by signal, so a non-nil error is expected
+		close(done)
 	}()
 
 	select {

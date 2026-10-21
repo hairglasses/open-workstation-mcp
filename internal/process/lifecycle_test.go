@@ -26,7 +26,7 @@ func TestLifecycle_SpawnAndKill(t *testing.T) {
 		t.Fatalf("failed to start sleep process: %v", err)
 	}
 	pid := cmd.Process.Pid
-	defer cmd.Process.Kill()
+	defer func() { _ = cmd.Process.Kill() }()
 
 	// Verify it appears in ps_list
 	td := findTool(t, "ps_list")
@@ -361,7 +361,7 @@ func TestInvestigatePort_WithListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 	t.Logf("listening on port %d", port)
@@ -403,7 +403,7 @@ func TestPortList_WithListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to start listener: %v", err)
 	}
-	defer ln.Close()
+	defer func() { _ = ln.Close() }()
 
 	port := ln.Addr().(*net.TCPAddr).Port
 

@@ -36,7 +36,7 @@ func (p *PortAllocator) Allocate() (int, error) {
 		l, err := net.ListenTCP("tcp", addr)
 		if err == nil {
 			port := l.Addr().(*net.TCPAddr).Port
-			l.Close()
+			_ = l.Close()
 			if !p.allocated[port] {
 				p.allocated[port] = true
 				return port, nil
@@ -58,7 +58,7 @@ func (p *PortAllocator) Allocate() (int, error) {
 			if err == nil {
 				l, err := net.ListenTCP("tcp", addr)
 				if err == nil {
-					l.Close()
+					_ = l.Close()
 					p.allocated[port] = true
 					p.nextPort = port + 1
 					if p.nextPort > p.maxPort {

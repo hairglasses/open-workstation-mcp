@@ -87,7 +87,7 @@ func SignalProcessSafely(key ProcessKey, sig syscall.Signal) error {
 		// Fallback to validated traditional signal if pidfd_open is unsupported
 		return syscall.Kill(key.PID, sig)
 	}
-	defer pidfd.Close()
+	defer func() { _ = pidfd.Close() }()
 
 	// Re-verify after opening the fd to close any minute race window
 	currentTicks, err := ReadProcessStartTicks(key.PID)

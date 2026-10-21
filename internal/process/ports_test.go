@@ -57,7 +57,7 @@ func TestPortAllocator_ConflictResolution(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to listen on tcp addr: %v", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	conflictedPort := l.Addr().(*net.TCPAddr).Port
 

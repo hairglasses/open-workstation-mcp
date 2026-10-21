@@ -90,7 +90,7 @@ func TestOpenPIDFD_Self(t *testing.T) {
 	if err != nil {
 		t.Skipf("pidfd_open unsupported on this kernel/container: %v", err)
 	}
-	defer pfd.Close()
+	defer func() { _ = pfd.Close() }()
 
 	if pfd.FD() == 0 {
 		t.Fatal("expected non-zero pidfd")
