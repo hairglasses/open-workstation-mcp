@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/hairglasses-studio/mcpkit/handler"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
 )
 
 type DbusProbeInput struct {

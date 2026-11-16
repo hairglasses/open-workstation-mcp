@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hairglasses-studio/mcpkit/handler"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
 )
 
 func TestCheckWriteRateLimit(t *testing.T) {

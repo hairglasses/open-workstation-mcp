@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hairglasses-studio/mcpkit/mcptest"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/mcptest"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 )
 
 // ---------------------------------------------------------------------------
@@ -732,18 +732,27 @@ func TestSearchPanes_Found(t *testing.T) {
 		"keys":    "Enter",
 	}))
 
-	time.Sleep(200 * time.Millisecond)
-
 	td := findTool(t, "tmux_search_panes")
-	result, err := td.Handler(context.Background(), makeReq(map[string]any{
-		"session": sessName,
-		"pattern": "SEARCH_MARKER_ABC123",
-	}))
-	if err != nil {
-		t.Fatalf("search_panes error: %v", err)
-	}
 	var out SearchPanesOutput
-	unmarshalResult(t, result, &out)
+	deadline := time.Now().Add(1 * time.Second)
+	for {
+		result, err := td.Handler(context.Background(), makeReq(map[string]any{
+			"session": sessName,
+			"pattern": "SEARCH_MARKER_ABC123",
+		}))
+		if err == nil {
+			var cur SearchPanesOutput
+			unmarshalResult(t, result, &cur)
+			if len(cur.Matches) > 0 {
+				out = cur
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	if len(out.Matches) == 0 {
 		t.Error("expected at least one match")
 	}

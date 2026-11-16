@@ -1,15 +1,17 @@
+CGO_ENABLED ?= 0
 GO ?= env GOWORK=off go
+GO_BUILD_FLAGS ?= -trimpath -buildvcs=true
 
 .PHONY: test vet build smoke boundary ci
 
 test:
-	$(GO) test -race ./...
+	env CGO_ENABLED=1 GOWORK=off go test -race -count=1 ./... < /dev/null
 
 vet:
-	$(GO) vet ./...
+	$(GO) vet ./... < /dev/null
 
 build:
-	$(GO) build -o open-workstation-mcp ./cmd/open-workstation-mcp
+	env CGO_ENABLED=$(CGO_ENABLED) GOWORK=off go build $(GO_BUILD_FLAGS) -o open-workstation-mcp ./cmd/open-workstation-mcp < /dev/null
 
 smoke: build
 	./open-workstation-mcp -tools

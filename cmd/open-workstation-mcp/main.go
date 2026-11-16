@@ -10,10 +10,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/hairglasses-studio/mcpkit/middleware/gate"
-	"github.com/hairglasses-studio/mcpkit/observability"
-	"github.com/hairglasses-studio/mcpkit/registry"
-	"github.com/hairglasses-studio/mcpkit/slogcfg"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/middleware/gate"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/observability"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/slogcfg"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/stdioguard"
 	"github.com/hairglasses/open-workstation-mcp/internal/process"
 	"github.com/hairglasses/open-workstation-mcp/internal/systemd"
 	"github.com/hairglasses/open-workstation-mcp/internal/tmux"
@@ -66,6 +67,11 @@ func main() {
 			}
 			return
 		}
+	}
+
+	if os.Getenv("MCP_SOCKET_PATH") == "" {
+		_, restoreStdio, _ := stdioguard.GuardStdio()
+		defer restoreStdio()
 	}
 
 	ctx := context.Background()

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hairglasses-studio/mcpkit/resources"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/resources"
 )
 
 // ---------------------------------------------------------------------------

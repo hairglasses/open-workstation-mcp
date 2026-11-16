@@ -1,7 +1,9 @@
 package tmux
 
 import (
+	"os"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -63,8 +65,9 @@ func TestRunTmuxExactTargetsAgainstRealTmux(t *testing.T) {
 		_, _ = runTmux("kill-session", "-t", "owmx")
 		_, _ = runTmux("kill-session", "-t", "owmx-long")
 	})
-	if out, err := runTmux("display-message", "-p", "#{socket_path}"); err != nil || len(out) == 0 || out[:5] != "/tmp/" {
-		t.Fatalf("not isolated: socket=%q err=%v", out, err)
+	wantPrefix := os.Getenv("TMUX_TMPDIR")
+	if out, err := runTmux("display-message", "-p", "#{socket_path}"); err != nil || wantPrefix == "" || !strings.HasPrefix(strings.TrimSpace(out), wantPrefix) {
+		t.Fatalf("not isolated: socket=%q wantPrefix=%q err=%v", out, wantPrefix, err)
 	}
 	if _, err := runTmux("send-keys", "-t", "owmx", "echo EXACT_OK", "Enter"); err != nil {
 		t.Fatalf("send-keys pane target: %v", err)

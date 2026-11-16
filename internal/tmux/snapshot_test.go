@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSnapshot_Validation(t *testing.T) {
@@ -68,19 +69,26 @@ func TestSnapshot_LiveSession(t *testing.T) {
 		_, _ = killTd.Handler(context.Background(), makeReq(map[string]any{"name": sessName}))
 	}()
 
-	// Snapshot the session
 	snapTd := findTool(t, "tmux_snapshot")
 	snapReq := makeReq(map[string]any{"session": sessName})
-	snapRes, err := snapTd.Handler(context.Background(), snapReq)
-	if err != nil {
-		t.Fatalf("snapshot handler error: %v", err)
-	}
-	if snapRes != nil && snapRes.IsError {
-		t.Fatalf("snapshot returned error: %v", snapRes)
-	}
-
 	var snapOut SnapshotOutput
-	unmarshalResult(t, snapRes, &snapOut)
+	deadline := time.Now().Add(1 * time.Second)
+	for {
+		snapRes, err := snapTd.Handler(context.Background(), snapReq)
+		if err == nil && (snapRes == nil || !snapRes.IsError) {
+			var cur SnapshotOutput
+			unmarshalResult(t, snapRes, &cur)
+			if cur.WindowCount > 0 && cur.PaneCount > 0 && len(cur.Windows) > 0 && len(cur.Windows[0].Panes) > 0 {
+				snapOut = cur
+				break
+			}
+			snapOut = cur
+		}
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 
 	if snapOut.Session != sessName {
 		t.Errorf("expected session %q, got %q", sessName, snapOut.Session)

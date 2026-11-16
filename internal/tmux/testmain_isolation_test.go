@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -15,11 +16,12 @@ import (
 // tmux.conf (so continuum never restores saved sessions into the test server)
 // keep every server this package starts private and disposable.
 func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("/tmp", "owm-tmux-")
+	dir, err := os.MkdirTemp("", "owm-tmux-")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "tmux test isolation:", err)
 		os.Exit(1)
 	}
+	_ = os.WriteFile(filepath.Join(dir, ".tmux.conf"), []byte("set-option -s exit-empty off\nset-option -g default-command \"bash --norc --noprofile -i\"\n"), 0o600)
 	_ = os.Unsetenv("TMUX")
 	_ = os.Unsetenv("TMUX_PANE")
 	_ = os.Setenv("TMUX_TMPDIR", dir)
