@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hairglasses-studio/mcpkit/handler"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 )
 
 // ---------------------------------------------------------------------------

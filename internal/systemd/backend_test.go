@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/hairglasses-studio/mcpkit/handler"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
 )
 
 type fakeCommandResponse struct {

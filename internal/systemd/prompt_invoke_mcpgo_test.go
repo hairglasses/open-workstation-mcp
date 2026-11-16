@@ -13,8 +13,8 @@ package systemd
 import (
 	"context"
 
-	"github.com/hairglasses-studio/mcpkit/prompts"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/prompts"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

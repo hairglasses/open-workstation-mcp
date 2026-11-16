@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hairglasses-studio/mcpkit/mcptest"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/mcptest"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 )
 
 func TestMCPServerIntegration_Lifecycle(t *testing.T) {

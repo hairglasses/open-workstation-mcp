@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hairglasses-studio/mcpkit/prompts"
-	"github.com/hairglasses-studio/mcpkit/registry"
-	"github.com/hairglasses-studio/mcpkit/resources"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/prompts"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/resources"
 )
 
 // newDocResource builds a registry-aliased Resource via mcpkit's compat

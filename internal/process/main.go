@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hairglasses-studio/mcpkit/handler"
-	"github.com/hairglasses-studio/mcpkit/middleware/gate"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/middleware/gate"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 )
 
 // ---------------------------------------------------------------------------

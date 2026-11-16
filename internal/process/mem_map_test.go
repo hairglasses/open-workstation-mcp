@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hairglasses-studio/mcpkit/mcptest"
-	"github.com/hairglasses-studio/mcpkit/registry"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/mcptest"
+	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 )
 
 func TestMemMap_CurrentProcess(t *testing.T) {
