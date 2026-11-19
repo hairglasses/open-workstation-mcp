@@ -192,7 +192,9 @@ type PortListOutput struct {
 // gpu_status
 // ---------------------------------------------------------------------------
 
-type GpuStatusInput struct{}
+type GpuStatusInput struct {
+	IncludeProcesses *bool `json:"include_processes,omitempty" jsonschema:"description=Optional flag to include per-process GPU memory metrics (default true)"`
+}
 
 type GpuInfo struct {
 	Vendor        string  `json:"vendor,omitempty"`
@@ -220,7 +222,9 @@ type GpuStatusOutput struct {
 // system_info
 // ---------------------------------------------------------------------------
 
-type SystemInfoInput struct{}
+type SystemInfoInput struct {
+	IncludeCGroup *bool `json:"include_cgroup,omitempty" jsonschema:"description=Optional flag to include cgroup controller information (default true)"`
+}
 
 type SystemInfoOutput struct {
 	Hostname    string            `json:"hostname"`
@@ -847,7 +851,7 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 	gpuStatus := handler.TypedHandler[GpuStatusInput, GpuStatusOutput](
 		"gpu_status",
 		"Call this when you need GPU telemetry, VRAM utilization, GPU process allocation, temperature, or driver status via nvidia-smi (NVIDIA) or rocm-smi (AMD).",
-		func(_ context.Context, _ GpuStatusInput) (GpuStatusOutput, error) {
+		func(_ context.Context, input GpuStatusInput) (GpuStatusOutput, error) {
 			hasNvidia := false
 			if _, err := exec.LookPath("nvidia-smi"); err == nil {
 				hasNvidia = true
@@ -873,11 +877,13 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 
 				result.GPU = parseGpuInfo(out)
 
-				out, _, err = runCmd("nvidia-smi", "--query-compute-apps=pid,name,used_memory", "--format=csv,noheader,nounits")
-				if err == nil && out != "" {
-					for line := range strings.SplitSeq(out, "\n") {
-						if gp, ok := parseGpuProcessLine(line); ok {
-							result.Processes = append(result.Processes, gp)
+				if input.IncludeProcesses == nil || *input.IncludeProcesses {
+					out, _, err = runCmd("nvidia-smi", "--query-compute-apps=pid,name,used_memory", "--format=csv,noheader,nounits")
+					if err == nil && out != "" {
+						for line := range strings.SplitSeq(out, "\n") {
+							if gp, ok := parseGpuProcessLine(line); ok {
+								result.Processes = append(result.Processes, gp)
+							}
 						}
 					}
 				}
@@ -889,7 +895,9 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 
 				gpu, procs := parseRocmGpuInfo([]byte(out))
 				result.GPU = gpu
-				result.Processes = procs
+				if input.IncludeProcesses == nil || *input.IncludeProcesses {
+					result.Processes = procs
+				}
 			}
 
 			if result.Processes == nil {
@@ -904,7 +912,7 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 	systemInfo := handler.TypedHandler[SystemInfoInput, SystemInfoOutput](
 		"system_info",
 		"Call this when you need host system telemetry, including hostname, Linux kernel version, uptime, load averages, CPU count, memory, and swap status.",
-		func(_ context.Context, _ SystemInfoInput) (SystemInfoOutput, error) {
+		func(_ context.Context, input SystemInfoInput) (SystemInfoOutput, error) {
 			var info SystemInfoOutput
 			info.Hostname, _ = os.Hostname()
 
@@ -927,8 +935,10 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 				info.SwapTotalMB = swapTotal / 1024
 				info.SwapUsedMB = (swapTotal - swapFree) / 1024
 			}
-			if raw, err := readProcFile("self/cgroup"); err == nil {
-				info.CGroup = strings.TrimSpace(raw)
+			if input.IncludeCGroup == nil || *input.IncludeCGroup {
+				if raw, err := readProcFile("self/cgroup"); err == nil {
+					info.CGroup = strings.TrimSpace(raw)
+				}
 			}
 			if nsEntries, err := os.ReadDir("/proc/self/ns"); err == nil {
 				info.Namespaces = make(map[string]string)

@@ -876,3 +876,129 @@ func TestResizePane_Execution(t *testing.T) {
 		}
 	})
 }
+
+func schemaAdvisories(node any, path string) []string {
+	var issues []string
+	m, ok := node.(map[string]any)
+	if !ok {
+		if arr, ok := node.([]any); ok {
+			for i, item := range arr {
+				issues = append(issues, schemaAdvisories(item, fmt.Sprintf("%s[%d]", path, i))...)
+			}
+		}
+		return issues
+	}
+	if typ, _ := m["type"].(string); typ == "object" {
+		props, _ := m["properties"].(map[string]any)
+		if len(props) == 0 {
+			issues = append(issues, fmt.Sprintf("%s: object missing properties", path))
+		}
+	} else if typ == "array" {
+		if _, hasItems := m["items"]; !hasItems {
+			issues = append(issues, fmt.Sprintf("%s: array missing items", path))
+		}
+	}
+	for _, key := range []string{"properties", "$defs", "definitions"} {
+		if sub, ok := m[key].(map[string]any); ok {
+			for k, v := range sub {
+				issues = append(issues, schemaAdvisories(v, path+"."+k)...)
+			}
+		}
+	}
+	for _, key := range []string{"items", "additionalProperties"} {
+		if sub, ok := m[key].(map[string]any); ok {
+			issues = append(issues, schemaAdvisories(sub, path+"."+key)...)
+		}
+	}
+	for _, key := range []string{"anyOf", "oneOf", "allOf"} {
+		if arr, ok := m[key].([]any); ok {
+			for i, v := range arr {
+				issues = append(issues, schemaAdvisories(v, fmt.Sprintf("%s.%s[%d]", path, key, i))...)
+			}
+		}
+	}
+	return issues
+}
+
+func TestAllToolSchemasHaveNonEmptyObjectProperties(t *testing.T) {
+	if got := schemaAdvisories(map[string]any{"type": "object"}, "."); len(got) == 0 {
+		t.Fatal("negative control failed: expected advisory for empty object schema")
+	}
+	m := &TmuxModule{}
+	for _, td := range m.Tools() {
+		raw, err := json.Marshal(td.Tool)
+		if err != nil {
+			t.Fatalf("marshal %s: %v", td.Tool.Name, err)
+		}
+		var doc map[string]any
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatalf("unmarshal %s: %v", td.Tool.Name, err)
+		}
+		inputSchema := doc["inputSchema"]
+		if inputSchema == nil {
+			t.Fatalf("%s missing inputSchema", td.Tool.Name)
+		}
+		if issues := schemaAdvisories(inputSchema, td.Tool.Name); len(issues) > 0 {
+			t.Fatalf("%s schema advisories: %v", td.Tool.Name, issues)
+		}
+	}
+}
+
+func TestListSessions_Filters(t *testing.T) {
+	requireTmux(t)
+	newTd := findTool(t, "tmux_new_session")
+	listTd := findTool(t, "tmux_list_sessions")
+	killTd := findTool(t, "tmux_kill_session")
+
+	prefix := fmt.Sprintf("filter-alpha-%d-", rand.Intn(100000))
+	alpha := prefix + "one"
+	beta := fmt.Sprintf("filter-beta-%d", rand.Intn(100000))
+	for _, name := range []string{alpha, beta} {
+		if res, err := newTd.Handler(context.Background(), makeReq(map[string]any{"name": name})); err != nil || (res != nil && res.IsError) {
+			t.Fatalf("new_session(%s): err=%v res=%v", name, err, res)
+		}
+		defer func(n string) {
+			_, _ = killTd.Handler(context.Background(), makeReq(map[string]any{"name": n}))
+		}(name)
+	}
+
+	resAll, err := listTd.Handler(context.Background(), makeReq(map[string]any{}))
+	if err != nil || resAll.IsError {
+		t.Fatalf("list_sessions default: err=%v res=%v", err, resAll)
+	}
+	var allOut ListSessionsOutput
+	unmarshalResult(t, resAll, &allOut)
+	seenAlpha := false
+	seenBeta := false
+	for _, s := range allOut.Sessions {
+		if s.Name == alpha {
+			seenAlpha = true
+		}
+		if s.Name == beta {
+			seenBeta = true
+		}
+	}
+	if !seenAlpha || !seenBeta {
+		t.Fatalf("expected both %s and %s in default list, got %+v", alpha, beta, allOut.Sessions)
+	}
+
+	resAlpha, err := listTd.Handler(context.Background(), makeReq(map[string]any{"prefix": prefix}))
+	if err != nil || resAlpha.IsError {
+		t.Fatalf("list_sessions prefix: err=%v res=%v", err, resAlpha)
+	}
+	var alphaOut ListSessionsOutput
+	unmarshalResult(t, resAlpha, &alphaOut)
+	if len(alphaOut.Sessions) != 1 || alphaOut.Sessions[0].Name != alpha {
+		t.Fatalf("expected only [%s], got %+v", alpha, alphaOut.Sessions)
+	}
+
+	resAttached, err := listTd.Handler(context.Background(), makeReq(map[string]any{"attached_only": true}))
+	if err != nil || resAttached.IsError {
+		t.Fatalf("list_sessions attached_only: err=%v res=%v", err, resAttached)
+	}
+	var attachedOut ListSessionsOutput
+	unmarshalResult(t, resAttached, &attachedOut)
+	if len(attachedOut.Sessions) != 0 {
+		t.Fatalf("expected 0 attached sessions, got %+v", attachedOut.Sessions)
+	}
+}

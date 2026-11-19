@@ -172,7 +172,10 @@ func validateKillSessionName(name string) error {
 
 // --- list_sessions ---
 
-type ListSessionsInput struct{}
+type ListSessionsInput struct {
+	Prefix       string `json:"prefix,omitempty" jsonschema:"description=Optional session name prefix filter"`
+	AttachedOnly bool   `json:"attached_only,omitempty" jsonschema:"description=When true return only attached sessions"`
+}
 
 type sessionInfo struct {
 	Name     string `json:"name"`
@@ -686,7 +689,7 @@ func (m *TmuxModule) Tools() []registry.ToolDefinition {
 	listSessions := handler.TypedHandler[ListSessionsInput, ListSessionsOutput](
 		"tmux_list_sessions",
 		"List all tmux sessions with window count, creation time, and attached status.",
-		func(_ context.Context, _ ListSessionsInput) (ListSessionsOutput, error) {
+		func(_ context.Context, input ListSessionsInput) (ListSessionsOutput, error) {
 			out, err := runTmux("list-sessions", "-F",
 				"#{session_name}\t#{session_windows}\t#{session_created}\t#{session_attached}")
 			if err != nil {
@@ -707,6 +710,12 @@ func (m *TmuxModule) Tools() []registry.ToolDefinition {
 				}
 				windows, _ := strconv.Atoi(parts[1])
 				attached := parts[3] == "1"
+				if input.Prefix != "" && !strings.HasPrefix(parts[0], input.Prefix) {
+					continue
+				}
+				if input.AttachedOnly && !attached {
+					continue
+				}
 				sessions = append(sessions, sessionInfo{
 					Name:     parts[0],
 					Windows:  windows,
