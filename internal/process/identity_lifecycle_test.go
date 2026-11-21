@@ -192,6 +192,20 @@ func TestKillProcess_CompositeIdentity_MatchingSucceeds(t *testing.T) {
 		_ = cmd.Wait()
 	}()
 
+	var comm string
+	var err error
+	deadline := time.Now().Add(time.Second)
+	for {
+		comm, err = readProcessComm(pid)
+		if err == nil && comm == "sleep" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for comm=sleep on pid %d: comm=%q err=%v", pid, comm, err)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		t.Fatalf("failed to get hostname: %v", err)
@@ -203,10 +217,6 @@ func TestKillProcess_CompositeIdentity_MatchingSucceeds(t *testing.T) {
 	ticks, err := readProcessStartTicks(pid)
 	if err != nil {
 		t.Fatalf("failed to read start ticks: %v", err)
-	}
-	comm, err := readProcessComm(pid)
-	if err != nil {
-		t.Fatalf("failed to read comm: %v", err)
 	}
 
 	td := findTool(t, "kill_process")
