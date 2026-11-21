@@ -30,8 +30,12 @@ import (
 // Helpers
 // ---------------------------------------------------------------------------
 
+var defaultTmuxCmdTimeout = 15 * time.Second
+
 func runCmd(name string, args ...string) (string, string, error) {
-	cmd := exec.Command(name, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTmuxCmdTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, name, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

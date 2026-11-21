@@ -2,20 +2,26 @@ package systemd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 )
 
 type commandRunner interface {
 	Run(name string, args ...string) (string, string, error)
 }
 
+var defaultCommandTimeout = 15 * time.Second
+
 type execCommandRunner struct{}
 
 func (execCommandRunner) Run(name string, args ...string) (string, string, error) {
-	cmd := exec.Command(name, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultCommandTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, name, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
