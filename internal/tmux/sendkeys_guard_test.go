@@ -3,7 +3,6 @@ package tmux
 import (
 	"context"
 	"errors"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -55,7 +54,6 @@ func TestSendKeysAllowed_Overrides(t *testing.T) {
 	}
 }
 
-// Real-tmux mutation check: a bash pane must not receive the keystrokes.
 func TestSendKeys_RefusedForRealShellPane(t *testing.T) {
 	requireTmux(t)
 	t.Setenv("FLEET_TMUX_SHELL_OK", "")
@@ -79,5 +77,4 @@ func TestSendKeys_RefusedForRealShellPane(t *testing.T) {
 	if strings.Contains(string(out), "GUARD_INJECTED") {
 		t.Fatal("keystrokes reached the shell pane despite refusal")
 	}
-	_ = os.Unsetenv("FLEET_TMUX_SHELL_OK")
 }

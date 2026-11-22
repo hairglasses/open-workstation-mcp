@@ -7,10 +7,6 @@ import (
 	"testing"
 )
 
-// ---------------------------------------------------------------------------
-// tmux_capture_pane edge cases
-// ---------------------------------------------------------------------------
-
 func TestCapture_LineCounts(t *testing.T) {
 	requireTmux(t)
 
@@ -45,17 +41,12 @@ func TestCapture_LineCounts(t *testing.T) {
 			}
 			var out CaptureOutput
 			unmarshalResult(t, result, &out)
-			// Should not panic and should return valid output
 			if out.Target == "" {
 				t.Error("target is empty")
 			}
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// tmux_send_keys with special characters
-// ---------------------------------------------------------------------------
 
 func TestSendKeys_SpecialChars(t *testing.T) {
 	requireTmux(t)
@@ -72,6 +63,31 @@ func TestSendKeys_SpecialChars(t *testing.T) {
 	}()
 
 	td := findTool(t, "tmux_send_keys")
+	waitTd := findTool(t, "tmux_wait_for_text")
+
+	if _, err := td.Handler(context.Background(), makeReq(map[string]any{
+		"session": sessName,
+		"keys":    "printf 'READY_%s\\n' 'SHELL'",
+	})); err != nil {
+		t.Fatalf("send_keys readiness command error: %v", err)
+	}
+	if _, err := td.Handler(context.Background(), makeReq(map[string]any{
+		"session": sessName,
+		"keys":    "Enter",
+	})); err != nil {
+		t.Fatalf("send_keys readiness Enter error: %v", err)
+	}
+	waitRes, err := waitTd.Handler(context.Background(), makeReq(map[string]any{
+		"session":      sessName,
+		"text":         "READY_SHELL",
+		"timeout_secs": 5,
+	}))
+	if err != nil {
+		t.Fatalf("wait_for_text readiness error: %v", err)
+	}
+	if waitRes != nil && waitRes.IsError {
+		t.Fatalf("wait_for_text readiness failed: %s", extractText(t, waitRes))
+	}
 
 	tests := []struct {
 		name string
@@ -99,10 +115,6 @@ func TestSendKeys_SpecialChars(t *testing.T) {
 		})
 	}
 }
-
-// ---------------------------------------------------------------------------
-// tmux_workspace with various layouts
-// ---------------------------------------------------------------------------
 
 func TestWorkspace_ValidLayouts(t *testing.T) {
 	requireTmux(t)
@@ -153,10 +165,6 @@ func TestWorkspace_ValidLayouts(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// tmux_new_session with directory and command
-// ---------------------------------------------------------------------------
-
 func TestNewSession_WithDirAndCommand(t *testing.T) {
 	requireTmux(t)
 
@@ -185,10 +193,6 @@ func TestNewSession_WithDirAndCommand(t *testing.T) {
 		t.Errorf("session = %q, want %q", out.Session, sessName)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// tmux_new_window with name and command
-// ---------------------------------------------------------------------------
 
 func TestNewWindow_WithNameAndCommand(t *testing.T) {
 	requireTmux(t)
