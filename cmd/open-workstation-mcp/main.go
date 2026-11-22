@@ -15,6 +15,7 @@ import (
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/slogcfg"
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/stdioguard"
+	"github.com/hairglasses/open-workstation-mcp/internal/omarchy"
 	"github.com/hairglasses/open-workstation-mcp/internal/process"
 	"github.com/hairglasses/open-workstation-mcp/internal/systemd"
 	"github.com/hairglasses/open-workstation-mcp/internal/tmux"
@@ -33,6 +34,7 @@ func BuildRegistry() *registry.ToolRegistry {
 	reg.RegisterModule(&systemd.SystemdModule{})
 	reg.RegisterModule(&tmux.TmuxModule{})
 	reg.RegisterModule(&process.ProcessModule{})
+	reg.RegisterModule(&omarchy.OmarchyModule{})
 
 	return reg
 }
@@ -55,7 +57,7 @@ func main() {
 		case "-tools", "--tools", "tools":
 			reg := BuildRegistry()
 			tools := reg.GetAllToolDefinitions()
-			fmt.Printf("Registered %d tools across systemd, tmux, and process domains:\n", len(tools))
+			fmt.Printf("Registered %d tools across systemd, tmux, process, and omarchy domains:\n", len(tools))
 			for _, t := range tools {
 				fmt.Printf("  - %s: %s\n", t.Tool.Name, t.Tool.Description)
 			}
@@ -106,6 +108,7 @@ func main() {
 	systemd.RegisterResourcesAndPrompts(s)
 	tmux.RegisterResourcesAndPrompts(s)
 	process.RegisterResourcesAndPrompts(s)
+	omarchy.RegisterResourcesAndPrompts(s)
 
 	if obs != nil {
 		reg.SetMiddleware([]registry.Middleware{

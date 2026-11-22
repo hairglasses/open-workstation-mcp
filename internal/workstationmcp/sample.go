@@ -36,6 +36,17 @@ func SampleGateway() *Gateway {
 		ReadOnly:    true,
 		Risk:        "medium",
 	}, inputPlanHandler))
+	must(g.Register(Tool{
+		Name:        "omarchy_control_plan",
+		Description: "Build a review-only Omarchy, Hyprland, and Ghostty control plan with flavor fencing and safety checks.",
+		InputSchema: schema([]string{"action", "flavor"}, map[string]any{
+			"action": map[string]string{"type": "string"},
+			"flavor": map[string]string{"type": "string"},
+			"target": map[string]string{"type": "string"},
+		}),
+		ReadOnly: true,
+		Risk:     "low",
+	}, omarchyControlPlanHandler))
 	return g
 }
 
@@ -108,6 +119,53 @@ func inputPlanHandler(_ context.Context, req Request) (Response, error) {
 			"show the exact text preview to the operator",
 			"stop before any live keystroke or paste action",
 		},
+	}}, nil
+}
+
+func omarchyControlPlanHandler(_ context.Context, req Request) (Response, error) {
+	action := strings.ToLower(clean(req.Params["action"]))
+	flavor := strings.ToLower(clean(req.Params["flavor"]))
+	target := clean(req.Params["target"])
+	if action == "" || flavor == "" {
+		return Response{}, fmt.Errorf("action and flavor parameters are required")
+	}
+	lowerTarget := strings.ToLower(target)
+	for _, blocked := range []string{"wl-copy", "wl-paste", "sigusr1", "#000000", "cyberpunk", "snazzy-black", "snazzy black"} {
+		if strings.Contains(lowerTarget, blocked) || strings.Contains(action, blocked) {
+			return Response{}, fmt.Errorf("target or action violates workstation safety policy: %s", blocked)
+		}
+	}
+	status := "READY_DRY_RUN"
+	switch flavor {
+	case "headless":
+		status = "SKIPPED_HEADLESS"
+	case "niri":
+		status = "SKIPPED_NIRI"
+	case "hyprland":
+	default:
+		return Response{}, fmt.Errorf("flavor must be hyprland, niri, or headless")
+	}
+	cmd := []string{"omarchy", "version"}
+	switch action {
+	case "debug":
+		cmd = []string{"omarchy", "debug", "--no-sudo", "--print"}
+	case "restart_terminal":
+		cmd = []string{"omarchy", "restart", "terminal"}
+	case "restart_shell":
+		cmd = []string{"omarchy", "restart", "shell"}
+	case "theme_set":
+		if target == "" {
+			target = "mineral-slate"
+		}
+		cmd = []string{"omarchy", "theme", "set", target}
+	}
+	return Response{OK: true, Payload: map[string]any{
+		"action":                action,
+		"flavor":                flavor,
+		"status":                status,
+		"command":               cmd,
+		"clipboard_policy":      "clipse",
+		"ghostty_reload_signal": "SIGUSR2",
 	}}, nil
 }
 
