@@ -738,6 +738,10 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 				return KillProcessOutput{}, fmt.Errorf("[%s] invalid signal %q; must be one of: TERM, KILL, HUP, INT, USR1, USR2, STOP, CONT", handler.ErrInvalidParam, sig)
 			}
 
+			if sig == "USR1" && strings.EqualFold(input.ExpectedComm, "ghostty") {
+				return KillProcessOutput{}, fmt.Errorf("[%s] refusing to send USR1 to ghostty (pid %d): USR1 terminates Ghostty; use USR2 or omarchy_restart with target=terminal", handler.ErrInvalidParam, input.PID)
+			}
+
 			// Host identity verification: if host is specified, it must match local hostname.
 			if input.Host != "" {
 				localHost, err := os.Hostname()
@@ -800,6 +804,13 @@ func (m *ProcessModule) Tools() []registry.ToolDefinition {
 			if isCrit, comm := isCriticalProcess(input.PID); isCrit && !input.Confirm {
 				slog.Error("critical system process requires confirm", "pid", input.PID, "process", comm)
 				return KillProcessOutput{}, fmt.Errorf("[%s] signaling critical process %q (pid %d) requires confirm: true", handler.ErrPermission, comm, input.PID)
+			}
+
+			if sig == "USR1" {
+				comm, _ := readProcessComm(input.PID)
+				if strings.EqualFold(input.ExpectedComm, "ghostty") || strings.EqualFold(comm, "ghostty") {
+					return KillProcessOutput{}, fmt.Errorf("[%s] refusing to send USR1 to ghostty (pid %d): USR1 terminates Ghostty; use USR2 or omarchy_restart with target=terminal", handler.ErrInvalidParam, input.PID)
+				}
 			}
 
 			slog.Info("sending signal", "pid", input.PID, "signal", sig)

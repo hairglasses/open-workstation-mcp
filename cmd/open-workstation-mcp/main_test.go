@@ -15,6 +15,7 @@ import (
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/handler"
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/registry"
 	"github.com/hairglasses/open-workstation-mcp/internal/mcpcompat/stdioguard"
+	"github.com/hairglasses/open-workstation-mcp/internal/omarchy"
 	"github.com/hairglasses/open-workstation-mcp/internal/process"
 	"github.com/hairglasses/open-workstation-mcp/internal/systemd"
 	"github.com/hairglasses/open-workstation-mcp/internal/tmux"
@@ -25,12 +26,11 @@ func TestOpenWorkstationMCP44ToolsRegistration(t *testing.T) {
 	reg := BuildRegistry()
 
 	count := reg.ToolCount()
-	if count != 44 {
-		t.Fatalf("expected exactly 44 tools, got %d", count)
+	if count != 57 {
+		t.Fatalf("expected exactly 57 tools, got %d", count)
 	}
 
 	expectedTools := []string{
-		// 13 systemd tools
 		"systemd_status",
 		"systemd_start",
 		"systemd_stop",
@@ -45,7 +45,6 @@ func TestOpenWorkstationMCP44ToolsRegistration(t *testing.T) {
 		"systemd_create_timer",
 		"systemd_analyze",
 
-		// 14 tmux tools
 		"tmux_list_sessions",
 		"tmux_list_windows",
 		"tmux_list_panes",
@@ -61,7 +60,6 @@ func TestOpenWorkstationMCP44ToolsRegistration(t *testing.T) {
 		"tmux_snapshot",
 		"tmux_template",
 
-		// 17 process tools
 		"ps_list",
 		"ps_tree",
 		"kill_process",
@@ -79,6 +77,20 @@ func TestOpenWorkstationMCP44ToolsRegistration(t *testing.T) {
 		"proc_inspect",
 		"liveness_gate",
 		"dbus_probe",
+
+		"omarchy_status",
+		"omarchy_commands",
+		"omarchy_hw",
+		"omarchy_debug",
+		"omarchy_config_validate",
+		"omarchy_theme",
+		"omarchy_font",
+		"omarchy_plugin",
+		"omarchy_bar",
+		"omarchy_hook",
+		"omarchy_restart",
+		"omarchy_toggle",
+		"omarchy_reminder",
 	}
 
 	registered := make(map[string]bool)
@@ -98,6 +110,7 @@ func TestOpenWorkstationMCP44ToolsRegistration(t *testing.T) {
 	systemd.RegisterResourcesAndPrompts(s)
 	tmux.RegisterResourcesAndPrompts(s)
 	process.RegisterResourcesAndPrompts(s)
+	omarchy.RegisterResourcesAndPrompts(s)
 }
 
 func TestRunManifest(t *testing.T) {

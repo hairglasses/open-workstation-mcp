@@ -146,8 +146,8 @@ func TestSchemaDetectorRedControl(t *testing.T) {
 
 func TestAllRegisteredToolsZeroSchemaAdvisories(t *testing.T) {
 	reg := BuildRegistry()
-	if got := reg.ToolCount(); got != 44 {
-		t.Fatalf("expected 44 tools, got %d", got)
+	if got := reg.ToolCount(); got != 57 {
+		t.Fatalf("expected 57 tools, got %d", got)
 	}
 
 	var violations []string
@@ -175,8 +175,8 @@ func TestAllRegisteredToolsZeroSchemaAdvisories(t *testing.T) {
 	}
 
 	manifest := workstationmcp.SampleGateway().Manifest()
-	if len(manifest.Tools) != 4 {
-		t.Fatalf("expected 4 sample gateway tools, got %d", len(manifest.Tools))
+	if len(manifest.Tools) != 5 {
+		t.Fatalf("expected 5 sample gateway tools, got %d", len(manifest.Tools))
 	}
 	for _, tool := range manifest.Tools {
 		raw, err := json.Marshal(tool.InputSchema)
@@ -223,8 +223,8 @@ func TestWireToolsListZeroSchemaAdvisories(t *testing.T) {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatalf("unmarshal tools/list response: %v", err)
 	}
-	if len(payload.Result.Tools) != 44 {
-		t.Fatalf("wire tools/list count = %d, want 44", len(payload.Result.Tools))
+	if len(payload.Result.Tools) != 57 {
+		t.Fatalf("wire tools/list count = %d, want 57", len(payload.Result.Tools))
 	}
 	var violations []string
 	for _, tool := range payload.Result.Tools {
